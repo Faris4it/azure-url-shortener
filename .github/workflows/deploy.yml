@@ -1,0 +1,78 @@
+name: Deploy Azure URL Shortener
+
+on:
+  push:
+    branches:
+      - main
+
+# id-token: write lets this workflow request an OIDC token from GitHub to
+# exchange for an Azure access token — no client secret stored anywhere.
+permissions:
+  id-token: write
+  contents: read
+
+# Prevents two pushes in quick succession from running overlapping
+# deployments against the same infrastructure.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-azurl-dev
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run pytest
+        run: pytest -q
+
+  deploy:
+    name: Deploy to Azure
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure via OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy infrastructure (Bicep)
+        run: |
+          az deployment group create \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters infra/main.parameters.json \
+            --mode Incremental
+
+      - name: Read Function App name from deployment output
+        id: infra
+        run: |
+          FUNCTION_APP_NAME=$(az deployment group show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name main \
+            --query properties.outputs.functionAppName.value -o tsv)
+          echo "function_app_name=$FUNCTION_APP_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy function code
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ steps.infra.outputs.function_app_name }}
+          package: "."

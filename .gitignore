@@ -1,0 +1,14 @@
+# Azure Functions local settings (contains real connection strings)
+local.settings.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Azure Functions build/publish artifacts
+bin/
+obj/
+.python_packages/
