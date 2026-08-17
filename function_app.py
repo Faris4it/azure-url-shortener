@@ -59,9 +59,15 @@ def _generate_short_code() -> str:
     return "".join(secrets.choice(SHORT_CODE_ALPHABET) for _ in range(SHORT_CODE_LENGTH))
 
 
-@app.route(route="shorten", methods=["POST"])
+@app.route(route="shorten", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
 def shorten(req: func.HttpRequest) -> func.HttpResponse:
-    """POST /api/shorten  {"url": "https://example.com"} -> {"short_code", "short_url"}"""
+    """POST /api/shorten  {"url": "https://example.com"} -> {"short_code", "short_url"}
+
+    Requires a function key (`?code=...` or the `x-functions-key` header).
+    Redirects stay anonymous so shared links work for everyone, but creating
+    a link is gated: an open shortener lets anyone mint URLs on this domain
+    that point anywhere, which is a ready-made phishing vector.
+    """
     try:
         body = req.get_json()
     except ValueError:

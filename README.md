@@ -20,15 +20,20 @@ cloud environment.
 
 ## API
 
-| Method | Route | Behavior |
-|---|---|---|
-| `POST` | `/api/shorten` | `{"url": "https://..."}` → `201` `{"short_code", "short_url"}` |
-| `GET` | `/api/{short_code}` | `302` redirect to the original URL, or `404` |
+| Method | Route | Auth | Behavior |
+|---|---|---|---|
+| `POST` | `/api/shorten` | function key | `{"url": "https://..."}` → `201` `{"short_code", "short_url"}` |
+| `GET` | `/api/{short_code}` | anonymous | `302` redirect to the original URL, or `404` |
 
 Invalid URLs, malformed JSON, and missing fields return `400` with a JSON error.
 
+Creating links requires a function key; **redirects are public**, so shared
+links work for everyone. An open shortener would let anyone mint links on
+this domain pointing anywhere — a ready-made phishing vector — so the write
+path is gated while the read path stays open.
+
 ```bash
-curl -X POST https://func-azurl-dev-gpj33z72s6dk6.azurewebsites.net/api/shorten \
+curl -X POST "https://func-azurl-dev-gpj33z72s6dk6.azurewebsites.net/api/shorten?code=<FUNCTION_KEY>" \
   -H "Content-Type: application/json" -d '{"url": "https://example.com"}'
 ```
 
@@ -187,8 +192,8 @@ isn't part of that bootstrap path.
 
 ## What I'd improve with more time
 
-- **Rate limiting.** `/api/shorten` is currently unauthenticated and unbounded. Azure API Management, or a per-IP counter in Table Storage, would stop abuse and runaway cost.
-- **Close the open redirect.** Anyone can currently point a link at any destination, which is a phishing vector. A destination allowlist, or requiring a function key to create links while keeping redirects public, would fix it.
+- **Rate limiting.** The function key gates *who* can create links, but not *how many*. Azure API Management, or a per-IP counter in Table Storage, would cap abuse and runaway cost.
+- **Destination allowlist.** Key holders can still point links anywhere. For a multi-tenant service, an allowlist plus a Safe Browsing check on submitted URLs would be the next layer.
 - **Link expiry.** Add a TTL column and a timer-triggered function to sweep expired entries, keeping the table small and giving users temporary links.
 - **Custom domain + TLS.** A short domain behind Azure Front Door, since `func-azurl-dev-….azurewebsites.net` rather defeats the purpose of a *short* URL.
 - **Shorter, collision-free codes.** Swap random generation for a counter encoded in base62, removing the retry loop and producing shorter links.
