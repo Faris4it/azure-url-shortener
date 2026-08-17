@@ -1,0 +1,13 @@
+.git*
+.github/
+.venv/
+venv/
+.vscode/
+__pycache__/
+.pytest_cache/
+tests/
+conftest.py
+infra/
+local.settings.json
+requirements-dev.txt
+README.md

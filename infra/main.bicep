@@ -211,13 +211,6 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
           value: appInsights.properties.ConnectionString
         }
-        {
-          // Tells Kudu to run an Oryx build (installing requirements.txt)
-          // after a zip-deploy, instead of expecting pre-built dependencies
-          // in the package. Needed for the CI/CD pipeline's zip deploy step.
-          name: 'SCM_DO_BUILD_DURING_DEPLOYMENT'
-          value: 'true'
-        }
       ]
     }
   }

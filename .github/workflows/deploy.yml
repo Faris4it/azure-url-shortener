@@ -71,8 +71,22 @@ jobs:
             --query properties.outputs.functionAppName.value -o tsv)
           echo "function_app_name=$FUNCTION_APP_NAME" >> "$GITHUB_OUTPUT"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # On a Linux Consumption plan with RBAC auth, functions-action deploys
+      # via WEBSITE_RUN_FROM_PACKAGE — the zip runs exactly as uploaded, with
+      # no build step on the Azure side. So dependencies have to be vendored
+      # into .python_packages/ here, or the worker can't import azure.functions
+      # and silently registers zero functions.
+      - name: Vendor Python dependencies into the package
+        run: pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+
       - name: Deploy function code
         uses: Azure/functions-action@v1
         with:
           app-name: ${{ steps.infra.outputs.function_app_name }}
           package: "."
+          respect-funcignore: true
