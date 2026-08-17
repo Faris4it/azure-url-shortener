@@ -133,7 +133,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enablePurgeProtection: false
+    // enablePurgeProtection is deliberately omitted: Azure only accepts
+    // `true` here, since turning purge protection on is irreversible.
+    // Leaving it unset keeps the vault fully deletable, which is what we
+    // want for a demo environment that gets torn down.
   }
 }
 
