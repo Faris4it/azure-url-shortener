@@ -91,8 +91,18 @@ az login
 ```
 
 ```bash
-az group create --name rg-azurl-dev --location eastus
+az group create --name rg-azurl-dev --location uaenorth
 ```
+
+> **Region note:** some subscriptions (Azure for Students, for example)
+> carry an "Allowed resource deployment regions" policy that restricts
+> where resources can be created. If a deployment fails with
+> `RequestDisallowedByAzure`, check which regions yours permits and set
+> `location` in `infra/main.parameters.json` accordingly:
+>
+> ```bash
+> az policy assignment show --scope "/subscriptions/$(az account show --query id -o tsv)" --name "sys.regionrestriction" --query "parameters.listOfAllowedLocations.value"
+> ```
 
 ```bash
 az deployment group create --resource-group rg-azurl-dev --template-file infra/main.bicep --parameters infra/main.parameters.json
